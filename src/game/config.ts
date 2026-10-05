@@ -53,7 +53,7 @@ export const PAYLINES: Payline[] = [
 
 export const BETS: BetTier[] = [
   { amount: 10,  payoutBonus: 1.00 },
-  { amount: 25,  payoutBonus: 1.03 },
+  { amount: 25,  payoutBonus: 1.04 },
   { amount: 50,  payoutBonus: 1.06 },
   { amount: 100, payoutBonus: 1.10 },
 ];
