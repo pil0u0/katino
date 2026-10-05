@@ -66,10 +66,11 @@
   }
 
   line {
-    stroke: #f5c542;
-    stroke-width: 6;
-    stroke-linecap: round;
-    filter: drop-shadow(0 0 6px rgb(245 197 66 / 0.8));
+    stroke: var(--moutarde);
+    stroke-width: 7;
+    stroke-linecap: square;
+    /* Contour sombre dur au lieu d'une lueur floue */
+    filter: drop-shadow(0 0 0 var(--encre)) drop-shadow(2px 2px 0 var(--encre));
     /* pathLength="1" : longueur normalisée, le tracé va de 1 (caché) à 0 (complet) */
     stroke-dasharray: 1;
     stroke-dashoffset: 1;

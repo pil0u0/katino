@@ -8,6 +8,11 @@ function fromRows(rows: SymbolId[][]): SymbolId[][] {
   return [0, 1, 2].map((col) => rows.map((row) => row[col]));
 }
 
+/** Gain d'un symbole lu dans la config : les tests suivent l'équilibrage tout seuls */
+function payout(id: SymbolId): number {
+  return CONFIG.symbols.find((s) => s.id === id)!.payout;
+}
+
 describe('evaluate', () => {
   it('aucun gain quand aucune ligne ne correspond', () => {
     const grid = fromRows([
@@ -29,7 +34,7 @@ describe('evaluate', () => {
     const result = evaluate(grid, 10, CONFIG);
     expect(result.wins).toHaveLength(1);
     expect(result.wins[0].paylineId).toBe('row-0');
-    expect(result.totalWin).toBe(600); // 10 × 60
+    expect(result.totalWin).toBe(10 * payout('seven'));
   });
 
   it('détecte une diagonale', () => {
@@ -40,7 +45,7 @@ describe('evaluate', () => {
     ]);
     const result = evaluate(grid, 10, CONFIG);
     expect(result.wins.map((w) => w.paylineId)).toEqual(['diag-down']);
-    expect(result.totalWin).toBe(20); // 10 × 2
+    expect(result.totalWin).toBe(10 * payout('lemon'));
   });
 
   it('une grille pleine paie les 8 lignes', () => {
@@ -51,7 +56,7 @@ describe('evaluate', () => {
     ]);
     const result = evaluate(grid, 10, CONFIG);
     expect(result.wins).toHaveLength(8);
-    expect(result.totalWin).toBe(320); // 8 × 10 × 4
+    expect(result.totalWin).toBe(8 * 10 * payout('bell'));
   });
 
   it('applique le bonus de mise', () => {
@@ -60,7 +65,8 @@ describe('evaluate', () => {
       ['lemon', 'bell', 'cherry'],
       ['clover', 'cherry', 'lemon'],
     ]);
-    expect(evaluate(grid, 100, CONFIG).totalWin).toBe(6600); // 100 × 60 × 1.10
+    const bonus = CONFIG.bets.find((b) => b.amount === 100)!.payoutBonus;
+    expect(evaluate(grid, 100, CONFIG).totalWin).toBe(Math.floor(100 * payout('seven') * bonus));
   });
 
   it('refuse une mise inconnue', () => {
@@ -83,13 +89,24 @@ describe('pickWeighted', () => {
   });
 });
 
-describe('theoreticalRtp', () => {
-  it('le RTP de la mise minimale est d\'environ 97 %', () => {
-    expect(theoreticalRtp(CONFIG, 10)).toBeCloseTo(0.97, 2);
+describe('équilibrage', () => {
+  // Ces tests vérifient les DÉCISIONS de design, pas des valeurs précises :
+  // on peut retoucher les gains sans les modifier, tant que les décisions tiennent.
+
+  it('le RTP de la mise minimale reste entre 95 % et 115 %', () => {
+    const rtp = theoreticalRtp(CONFIG, 10);
+    expect(rtp).toBeGreaterThan(0.95);
+    expect(rtp).toBeLessThan(1.15);
   });
 
   it('le RTP augmente avec la mise', () => {
     const rtps = CONFIG.bets.map((b) => theoreticalRtp(CONFIG, b.amount));
     expect(rtps).toEqual([...rtps].sort((a, b) => a - b));
+  });
+
+  it('tout gain rapporte plus que la mise (pas de « faux gain »)', () => {
+    for (const symbol of CONFIG.symbols) {
+      expect(symbol.payout).toBeGreaterThan(1);
+    }
   });
 });

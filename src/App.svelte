@@ -25,6 +25,7 @@
   import BetSelector from "./ui/BetSelector.svelte";
   import EndScreen from "./ui/EndScreen.svelte";
   import CreditsChart, { type ChartSeries } from "./ui/CreditsChart.svelte";
+  import { sfx, setMuted } from "./audio/sfx";
 
   let game = $state(createGame(CONFIG));
 
@@ -120,13 +121,45 @@
   // (fin du temps dans la boucle, faillite pendant une résolution…). Une seule fois.
   $effect(() => {
     if (game.phase === "ended" && currentRecordId === null) {
-      currentRecordId = untrack(() => recordGame(history, game).id);
+      untrack(() => {
+        // Le record à battre AVANT d'enregistrer cette partie
+        const previousBest = bestGame(history);
+        currentRecordId = recordGame(history, game).id;
+        if (previousBest && game.credits > previousBest.finalCredits)
+          sfx.record();
+        else sfx.end();
+      });
     }
   });
+
+  // ---- Son ----
+  let soundOn = $state(true);
+
+  function toggleSound() {
+    soundOn = !soundOn;
+    setMuted(!soundOn);
+  }
+
+  // Tic-tac des 5 dernières secondes : l'effet se relance quand la seconde affichée change
+  const secondsLeft = $derived(Math.ceil(remainingMs / 1000));
+  $effect(() => {
+    if (
+      secondsLeft <= 5 &&
+      secondsLeft > 0 &&
+      untrack(() => game.phase) === "playing"
+    ) {
+      sfx.tick(secondsLeft <= 3);
+    }
+  });
+
+  function handleBet(amount: number) {
+    if (amount !== game.bet && setBet(game, amount, CONFIG)) sfx.click();
+  }
 
   function handleStart() {
     now = performance.now();
     startGame(game, now);
+    sfx.coin();
   }
 
   function handleSpin() {
@@ -136,7 +169,7 @@
       resolveSpin(game, CONFIG, t);
       return;
     }
-    startSpin(game, CONFIG, t);
+    if (startSpin(game, CONFIG, t)) sfx.spin();
   }
 
   // Appelé quand les 3 colonnes ont fini leur animation
@@ -151,7 +184,13 @@
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.repeat) return; // maintenir la touche ne déclenche qu'une action
-    if (game.phase === "ended") return; // l'écran de fin gère ses propres touches
+    if (game.phase === "ended" && e.key.toLowerCase() !== "m") return; // l'écran de fin gère ses touches
+
+    // Une LETTRE se teste avec e.key : sur AZERTY, la touche M n'est pas au même endroit qu'en QWERTY
+    if (e.key.toLowerCase() === "m") {
+      toggleSound();
+      return;
+    }
 
     if (e.code === "Space" || e.code === "Enter") {
       e.preventDefault(); // empêche aussi le bouton qui a le focus de recevoir un « clic » en plus
@@ -166,7 +205,7 @@
       NUMPAD_KEYS.indexOf(e.code),
     );
     if (index >= 0 && index < betAmounts.length) {
-      setBet(game, betAmounts[index], CONFIG);
+      handleBet(betAmounts[index]);
     }
   }
 
@@ -180,19 +219,27 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <div class="layout">
-  <main>
-    <h1>Slot Rush</h1>
+  <main class="cabinet">
+    <!-- Autocollants collés sur la carrosserie : purement décoratifs -->
+    <span class="sticker sticker-time" aria-hidden="true">1 MIN</span>
+    <span class="sticker sticker-lucky" aria-hidden="true">ラッキー!</span>
 
-    <Timer {remainingMs} />
+    <header class="marquee">
+      <span class="jp" aria-hidden="true">カティノ</span>
+      <h1>Katino</h1>
+    </header>
 
-    <Hud
-      credits={game.credits}
-      bet={game.currentSpin?.bet ?? game.bet}
-      lastWin={game.lastWin}
-      hasSpun={game.currentSpin !== null && game.machine === "ready"}
-      best={overallBest?.finalCredits ?? null}
-      playing={game.phase === "playing"}
-    />
+    <div class="displays">
+      <Timer {remainingMs} />
+      <Hud
+        credits={game.credits}
+        bet={game.currentSpin?.bet ?? game.bet}
+        lastWin={game.lastWin}
+        hasSpun={game.currentSpin !== null && game.machine === "ready"}
+        best={overallBest?.finalCredits ?? null}
+        playing={game.phase === "playing"}
+      />
+    </div>
 
     <SlotMachine
       grid={game.currentSpin?.grid ?? initialGrid}
@@ -204,32 +251,41 @@
       onallstopped={handleReelsStopped}
     />
 
-    <BetSelector
-      amounts={betAmounts}
-      selected={game.bet}
-      credits={game.credits}
-      disabled={game.phase === "ended"}
-      onselect={(amount) => setBet(game, amount, CONFIG)}
-    />
+    <div class="deck">
+      <BetSelector
+        amounts={betAmounts}
+        selected={game.bet}
+        credits={game.credits}
+        disabled={game.phase === "ended"}
+        onselect={handleBet}
+      />
 
-    {#if game.phase === "menu"}
-      <div class="intro">
-        <p>60 secondes. 1000 crédits. Faites le meilleur score possible.</p>
+      {#if game.phase === "menu"}
+        <p class="intro">
+          60 secondes, 1000 crédits. Faites le meilleur score possible.
+        </p>
         <button class="spin" onclick={handleStart}>Commencer</button>
-      </div>
-    {:else}
-      <button
-        class="spin"
-        onclick={handleSpin}
-        disabled={game.machine !== "spinning" && !canSpin(game)}
-      >
-        {game.machine === "spinning" ? "Stop" : `Lancer (${game.bet})`}
-      </button>
-    {/if}
+      {:else}
+        <button
+          class="spin"
+          class:stop={game.machine === "spinning"}
+          onclick={handleSpin}
+          disabled={game.machine !== "spinning" && !canSpin(game)}
+        >
+          {game.machine === "spinning" ? "Stop" : `Lancer ${game.bet}`}
+        </button>
+      {/if}
+    </div>
 
-    <p class="hint">
-      <kbd>Espace</kbd> lancer / arrêter · <kbd>1</kbd>–<kbd>4</kbd> choisir la mise
-    </p>
+    <div class="footer">
+      <button class="sound" onclick={toggleSound} aria-pressed={soundOn}>
+        Son : {soundOn ? "oui" : "non"}
+      </button>
+      <p class="hint">
+        <kbd>Espace</kbd> lancer · <kbd>1</kbd>–<kbd>4</kbd> mise · <kbd>M</kbd>
+        son
+      </p>
+    </div>
   </main>
 
   <aside>
@@ -260,13 +316,15 @@
     display: grid;
     /* minmax(0, 1fr) : la colonne ne peut jamais dépasser la largeur de l'écran */
     grid-template-columns: minmax(0, 1fr);
-    gap: 1rem 3rem;
+    gap: 2rem 3rem;
     max-width: 1100px;
     margin: 0 auto;
-    padding: 0 1rem 2rem;
+    padding: 2rem 1rem;
+    /* Les particules et la secousse d'un gros gain ne créent jamais de défilement horizontal */
+    overflow-x: clip;
   }
 
-  /* Sur grand écran : le jeu à gauche, le graphique à droite */
+  /* Sur grand écran : la borne à gauche, le graphique à droite */
   @media (min-width: 960px) {
     .layout {
       grid-template-columns: auto minmax(0, 1fr);
@@ -276,74 +334,206 @@
 
   aside h2 {
     margin: 0 0 0.75rem;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    opacity: 0.6;
+    font-size: 0.95rem;
+    color: var(--phosphore);
   }
 
-  main {
+  /* ---- La borne ---- */
+  .cabinet {
+    position: relative;
+    justify-self: center;
+    /* Largeur fixe : la borne ne « respire » pas quand son contenu change */
+    box-sizing: border-box;
+    width: min(100%, 24rem);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.5rem;
-    padding: 2rem 1rem;
+    gap: 16px;
+    padding: 0 18px 18px;
+    /* Carrosserie bleu riso, imprimée en trame de points */
+    background-color: var(--riso);
+    background-image: radial-gradient(
+      rgb(7 8 42 / 0.28) 1.3px,
+      transparent 1.8px
+    );
+    background-size: 6px 6px;
+    border: var(--contour);
+    box-shadow: 8px 8px 0 var(--encre);
   }
 
+  /* Bandeau lumineux en haut de la borne, avec un damier dessous */
+  .marquee {
+    align-self: stretch;
+    margin: 0 -18px;
+    padding: 12px 18px 18px;
+    text-align: center;
+    background:
+      repeating-conic-gradient(var(--encre) 0 25%, var(--papier) 0 50%) bottom /
+        12px 12px repeat-x,
+      var(--moutarde);
+    border-bottom: var(--contour);
+  }
+
+  .jp {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--encre);
+    letter-spacing: 0.2em;
+  }
+
+  h1 {
+    font-family: var(--font-titre);
+    font-size: clamp(2rem, 9vw, 2.8rem);
+    line-height: 1.05;
+    color: var(--papier);
+    -webkit-text-stroke: 3px var(--encre);
+    paint-order: stroke fill;
+    text-shadow: 4px 4px 0 var(--encre);
+  }
+
+  .displays {
+    align-self: stretch;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+  }
+
+  .deck {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .intro {
+    margin: 0;
+    max-width: 22rem;
+    text-align: center;
+    color: var(--papier);
+  }
+
+  /* Gros bouton d'arcade : seul élément rond de la borne */
   .spin {
-    font-size: 1.25rem;
-    font-weight: 700;
-    padding: 0.75rem 3rem;
-    border: none;
+    min-width: 12rem;
+    padding: 0.75rem 2rem;
+    font-family: var(--font-titre);
+    font-size: 1.35rem;
+    color: var(--encre);
+    background: var(--moutarde);
+    border: var(--contour);
     border-radius: 999px;
-    background: #f5c542;
-    color: #1b1b2f;
+    box-shadow:
+      inset 0 -5px 0 rgb(7 8 42 / 0.25),
+      0 6px 0 var(--encre);
     cursor: pointer;
     touch-action: manipulation; /* pas de zoom au double tap sur mobile */
     user-select: none;
   }
 
-  .spin:active {
-    transform: scale(0.96);
+  .spin:active:not(:disabled) {
+    transform: translateY(4px);
+    box-shadow:
+      inset 0 -2px 0 rgb(7 8 42 / 0.25),
+      0 2px 0 var(--encre);
+  }
+
+  .spin.stop {
+    background: var(--phosphore);
   }
 
   .spin:disabled {
-    opacity: 0.4;
+    background: var(--terne);
     cursor: not-allowed;
   }
 
-  .intro {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.75rem;
+  /* ---- Autocollants ---- */
+  .sticker {
+    position: absolute;
+    z-index: 3;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    color: var(--encre);
+    border: 2px solid var(--encre);
+    box-shadow: 2px 2px 0 var(--encre);
+    pointer-events: none;
   }
 
-  .intro p {
-    margin: 0;
-    text-align: center;
-    opacity: 0.8;
+  .sticker-time {
+    top: 14px;
+    left: 10px;
+    background: var(--phosphore);
+    transform: rotate(-8deg);
+  }
+
+  .sticker-lucky {
+    top: 92px;
+    right: 6px;
+    background: var(--papier);
+    transform: rotate(6deg);
+  }
+
+  .footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 12px;
+    margin-top: -4px;
+  }
+
+  .sound {
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    color: var(--phosphore);
+    background: var(--encre);
+    border: 2px solid var(--encre);
+    box-shadow: inset 0 0 0 1px var(--phosphore);
+    cursor: pointer;
+  }
+
+  .sound[aria-pressed="false"] {
+    color: var(--terne);
+    box-shadow: inset 0 0 0 1px var(--terne);
   }
 
   .hint {
-    margin: -0.5rem 0 0;
-    font-size: 0.8rem;
-    opacity: 0.5;
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--papier);
   }
 
   kbd {
-    padding: 0.1rem 0.35rem;
+    padding: 0 0.35rem;
     font-family: inherit;
     font-size: 0.75rem;
-    border: 1px solid rgb(255 255 255 / 0.3);
-    border-radius: 4px;
+    background: var(--encre);
+    border: 1px solid var(--phosphore);
   }
 
-  /* Petits écrans : la page a déjà une marge sur les côtés, main n'en ajoute pas */
+  /* Petits écrans : borne plus serrée, stickers plus discrets */
   @media (max-width: 420px) {
-    main {
-      gap: 1.25rem;
-      padding: 1.5rem 0;
+    .layout {
+      padding: 1rem 0.75rem;
+    }
+
+    .cabinet {
+      padding: 0 10px 14px;
+      gap: 12px;
+    }
+
+    .marquee {
+      margin: 0 -10px;
+    }
+
+    .sticker-lucky {
+      display: none;
+    }
+  }
+
+  /* Très petits écrans : le dernier sticker gênerait le titre */
+  @media (max-width: 340px) {
+    .sticker-time {
+      display: none;
     }
   }
 

@@ -1,12 +1,13 @@
 export type SymbolId = 'cherry' | 'lemon' | 'bell' | 'clover' | 'diamond' | 'seven';
 
+/** Règles d'un symbole. Son apparence (image, nom affiché) vit dans src/ui/symbols.ts */
 export interface SymbolDef {
   id: SymbolId;
-  icon: string;
-  weight: number;
-  payout: number;
+  weight: number;  // poids relatif d'apparition
+  payout: number;  // multiplicateur de la mise pour 3 identiques sur une ligne
 }
 
+/** Coordonnées d'une case : [colonne, ligne], de 0 à 2 */
 export type Cell = readonly [col: number, row: number];
 
 export interface Payline {
@@ -15,8 +16,8 @@ export interface Payline {
 }
 
 export interface BetTier {
-  amount: number;
-  payoutBonus: number;
+  amount: number;       // coût du lancer
+  payoutBonus: number;  // multiplicateur des gains (pilote le RTP)
 }
 
 export interface GameConfig {
@@ -25,16 +26,17 @@ export interface GameConfig {
   bets: BetTier[];
   durationMs: number;
   startingCredits: number;
-  bigWinThreshold: number;
+  bigWinThreshold: number; // gain >= X fois la mise → grosse animation
 }
 
+// Du plus fréquent (petit gain) au plus rare (jackpot)
 export const SYMBOLS: SymbolDef[] = [
-  { id: 'cherry',  icon: '🍒', weight: 30, payout: 1 },
-  { id: 'lemon',   icon: '🍋', weight: 27, payout: 2 },
-  { id: 'bell',    icon: '🔔', weight: 18, payout: 4 },
-  { id: 'clover',  icon: '🍀', weight: 12, payout: 8 },
-  { id: 'diamond', icon: '💎', weight: 8,  payout: 20 },
-  { id: 'seven',   icon: '7️⃣', weight: 5,  payout: 60 },
+  { id: 'cherry',  weight: 30, payout: 2 },
+  { id: 'lemon',   weight: 27, payout: 2 },
+  { id: 'bell',    weight: 18, payout: 3 },
+  { id: 'clover',  weight: 12, payout: 6 },
+  { id: 'diamond', weight: 8,  payout: 15 },
+  { id: 'seven',   weight: 5,  payout: 50 },
 ];
 
 export const PAYLINES: Payline[] = [

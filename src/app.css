@@ -1,7 +1,39 @@
+/* Polices : servies par le projet lui-même (pas d'appel à Google Fonts) */
+@import '@fontsource/dela-gothic-one';
+@import '@fontsource/dotgothic16';
+
+@font-face {
+  font-family: 'DSEG7';
+  src: url('dseg/fonts/DSEG7-Classic/DSEG7Classic-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
+/* ---- Jetons de la direction « borne oubliée » ---- */
 :root {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  color: #f1f1f1;
-  background: #10101e;
+  --nuit: #10123a;       /* fond de la salle */
+  --encre: #07082a;      /* contours, ombres dures, fond des afficheurs */
+  --riso: #3b3bd6;       /* bleu riso : carrosserie, aplats */
+  --riso-clair: #6c6cf0;
+  --phosphore: #9ff0ff;  /* texte d'écran, lueur */
+  --papier: #e8f3ff;     /* cases de la grille */
+  --moutarde: #f0c419;   /* stickers, mise choisie, gains */
+  --alarme: #ff4f6d;     /* fin du temps uniquement */
+  --terne: #8a8fd6;      /* pertes, textes secondaires */
+
+  --font-titre: 'Dela Gothic One', system-ui, sans-serif;
+  --font-ui: 'DotGothic16', system-ui, sans-serif;
+  --font-lcd: 'DSEG7', ui-monospace, monospace;
+
+  --contour: 3px solid var(--encre);
+  --ombre-dure: 4px 4px 0 var(--encre);
+
+  font-family: var(--font-ui);
+  color: var(--papier);
+  background-color: var(--nuit);
+  /* Trame de points discrète sur toute la salle */
+  background-image: radial-gradient(rgb(108 108 240 / 0.18) 1px, transparent 1.4px);
+  background-size: 6px 6px;
 }
 
 body {
@@ -9,7 +41,18 @@ body {
   min-height: 100vh;
 }
 
-h1 {
+h1,
+h2 {
   margin: 0;
-  letter-spacing: 0.05em;
+  font-weight: 400;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* Focus clavier toujours visible, dans l'esprit de la borne */
+:focus-visible {
+  outline: 3px dashed var(--moutarde);
+  outline-offset: 3px;
 }

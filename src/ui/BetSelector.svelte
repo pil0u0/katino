@@ -27,37 +27,49 @@
 <style>
   .bets {
     display: flex;
-    gap: 0.5rem;
+    gap: 8px;
   }
 
   button {
-    min-width: 4rem;
-    padding: 0.5rem 0.75rem;
-    font-size: 1rem;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: #f1f1f1;
-    background: #2a2a45;
-    border: 2px solid transparent;
-    border-radius: 10px;
+    min-width: 3.6rem;
+    padding: 0.45rem 0.6rem;
+    font-family: var(--font-lcd);
+    font-size: 0.95rem;
+    color: var(--phosphore);
+    background: var(--encre);
+    border: var(--contour);
+    box-shadow:
+      inset 0 0 0 2px var(--riso),
+      3px 3px 0 var(--encre);
     cursor: pointer;
   }
 
+  /* Touche enfoncée : elle descend, l'ombre disparaît */
+  button:active:not(:disabled) {
+    transform: translate(3px, 3px);
+    box-shadow: inset 0 0 0 2px var(--riso);
+  }
+
   button.selected {
-    border-color: #f5c542;
-    color: #f5c542;
+    color: var(--encre);
+    background: var(--moutarde);
+    box-shadow:
+      inset 0 0 0 2px #fff6c8,
+      3px 3px 0 var(--encre);
   }
 
   button:disabled {
-    opacity: 0.35;
+    color: rgb(159 240 255 / 0.3);
+    box-shadow: inset 0 0 0 2px rgb(59 59 214 / 0.4);
     cursor: not-allowed;
   }
 
   /* Petits écrans : quatre boutons sur une ligne */
   @media (max-width: 420px) {
     button {
-      min-width: 3.25rem;
-      padding: 0.5rem;
+      min-width: 3.1rem;
+      padding: 0.45rem 0.4rem;
+      font-size: 0.85rem;
     }
   }
 </style>

@@ -2,6 +2,7 @@
   import { tick, untrack } from "svelte";
   import { CONFIG, type SymbolId } from "../game/config";
   import { pickWeighted } from "../game/rng";
+  import SymbolTile from "./SymbolTile.svelte";
 
   interface Props {
     symbols: SymbolId[]; // les 3 symboles finaux de la colonne, de haut en bas
@@ -19,10 +20,6 @@
     const gap = parseFloat(getComputedStyle(stripEl).rowGap) || 0;
     return first.getBoundingClientRect().height + gap;
   }
-
-  const icons = Object.fromEntries(
-    CONFIG.symbols.map((s) => [s.id, s.icon]),
-  ) as Record<SymbolId, string>;
 
   const randomSymbol = () => pickWeighted(CONFIG.symbols).id;
 
@@ -115,7 +112,7 @@
 <div class="reel" bind:this={reelEl}>
   <div class="strip" bind:this={stripEl}>
     {#each strip as symbol, i (i)}
-      <div class="symbol">{icons[symbol]}</div>
+      <div class="symbol"><SymbolTile id={symbol} /></div>
     {/each}
   </div>
 </div>
@@ -125,7 +122,6 @@
   .reel {
     height: calc(var(--cell) * 3 + var(--gap) * 2);
     overflow: hidden;
-    border-radius: 10px;
   }
 
   .strip {
@@ -142,7 +138,13 @@
     place-items: center;
     flex: 0 0 var(--cell);
     font-size: calc(var(--cell) / 2);
-    background: #2a2a45;
-    border-radius: 10px;
+    /* Papier imprimé en riso : fond clair + trame de points bleus */
+    background-color: var(--papier);
+    background-image: radial-gradient(
+      rgb(59 59 214 / 0.22) 1.2px,
+      transparent 1.6px
+    );
+    background-size: 7px 7px;
+    border: 2px solid var(--encre);
   }
 </style>

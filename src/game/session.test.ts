@@ -13,6 +13,9 @@ function sequence(values: number[]): Rng {
 }
 
 const allCherries: Rng = () => 0;          // grille pleine de cerises → 8 lignes × mise
+const CHERRY = CONFIG.symbols.find((s) => s.id === 'cherry')!.payout;
+/** Gain d'une grille pleine de cerises à la mise de 10 (bonus de 1.00) */
+const ALL_CHERRIES_WIN = 8 * 10 * CHERRY;
 const noWin = sequence([0.1, 0.4, 0.8, 0.4, 0.6, 0.1, 0.6, 0.1, 0.4]); // aucune ligne
 
 /** Crée une partie déjà démarrée au temps 0. */
@@ -42,8 +45,8 @@ describe('session', () => {
     expect(game.machine).toBe('spinning');
 
     resolveSpin(game, CONFIG, 200);
-    expect(game.credits).toBe(990 + 80);
-    expect(game.lastWin).toBe(80);
+    expect(game.credits).toBe(990 + ALL_CHERRIES_WIN);
+    expect(game.lastWin).toBe(ALL_CHERRIES_WIN);
     expect(game.machine).toBe('ready');
   });
 
@@ -113,7 +116,7 @@ describe('chronomètre', () => {
     const game = startedGame();
     startSpin(game, CONFIG, 59_500, allCherries);
     tick(game, CONFIG, 60_016);
-    expect(game.credits).toBe(1070);
+    expect(game.credits).toBe(990 + ALL_CHERRIES_WIN);
     expect(game.phase).toBe('ended');
     expect(game.endReason).toBe('time');
   });
@@ -150,7 +153,7 @@ describe('points du graphique', () => {
       { t: 0, credits: 1000 },
       { t: 1000, credits: 990 },
       { t: 3000, credits: 980 },
-      { t: 4000, credits: 1060 },
+      { t: 4000, credits: 980 + ALL_CHERRIES_WIN },
     ]);
   });
 
@@ -158,7 +161,8 @@ describe('points du graphique', () => {
     const game = startedGame();
     startSpin(game, CONFIG, 59_500, allCherries);
     tick(game, CONFIG, 60_200);
-    expect(game.points.at(-2)).toEqual({ t: 60_000, credits: 1070 }); // gain résolu
-    expect(game.points.at(-1)).toEqual({ t: 60_000, credits: 1070 }); // point final
+    const final = 990 + ALL_CHERRIES_WIN;
+    expect(game.points.at(-2)).toEqual({ t: 60_000, credits: final }); // gain résolu
+    expect(game.points.at(-1)).toEqual({ t: 60_000, credits: final }); // point final
   });
 });

@@ -1,5 +1,5 @@
 {
-  "name": "slot-rush",
+  "name": "katino",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -23,6 +23,9 @@
     "vitest": "^5.0.3"
   },
   "dependencies": {
-    "chart.js": "^4.5.1"
+    "@fontsource/dela-gothic-one": "^5.3.0",
+    "@fontsource/dotgothic16": "^5.3.0",
+    "chart.js": "^4.5.1",
+    "dseg": "^0.46.0"
   }
 }

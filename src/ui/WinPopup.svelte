@@ -50,30 +50,37 @@
     animation: pop 1s ease-out forwards;
   }
 
+  /* Contour épais + couleurs qui « bavent » (cyan à gauche, magenta à droite) comme sur un tube */
   .amount {
-    font-size: 3rem;
-    font-weight: 900;
+    font-family: var(--font-titre);
+    font-size: clamp(1.8rem, 9vw, 2.6rem);
     font-variant-numeric: tabular-nums;
-    color: #4ade80;
+    color: var(--moutarde);
+    -webkit-text-stroke: 2px var(--encre);
+    paint-order: stroke fill;
     text-shadow:
-      0 2px 0 #10101e,
-      0 0 18px rgb(74 222 128 / 0.6);
+      -3px 0 0 rgb(159 240 255 / 0.85),
+      3px 0 0 rgb(255 79 216 / 0.7),
+      0 4px 0 var(--encre);
   }
 
   .mult {
+    padding: 0 6px;
+    font-family: var(--font-ui);
     font-size: 1.1rem;
-    font-weight: 800;
-    color: #f1f1f1;
-    text-shadow: 0 1px 0 #10101e;
+    color: var(--encre);
+    background: var(--phosphore);
+    border: 2px solid var(--encre);
   }
 
   .label {
+    padding: 2px 8px;
+    font-family: var(--font-ui);
     font-size: 1rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    color: #f5c542;
-    text-shadow: 0 1px 0 #10101e;
+    color: var(--encre);
+    background: var(--moutarde);
+    border: 2px solid var(--encre);
+    transform: rotate(-4deg);
   }
 
   .big {
@@ -81,11 +88,12 @@
   }
 
   .big .amount {
-    font-size: 4.5rem;
-    color: #f5c542;
+    font-size: clamp(2.2rem, 11vw, 3.6rem);
+    -webkit-text-stroke: 3px var(--encre);
     text-shadow:
-      0 3px 0 #10101e,
-      0 0 28px rgb(245 197 66 / 0.8);
+      -4px 0 0 rgb(159 240 255 / 0.9),
+      4px 0 0 rgb(255 79 216 / 0.8),
+      0 5px 0 var(--encre);
   }
 
   .big .mult {
@@ -149,18 +157,17 @@
     width: 10px;
     height: 10px;
     margin: -5px;
-    border-radius: 50%;
-    background: #f5c542;
+    background: var(--moutarde);
+    border: 2px solid var(--encre);
     animation: burst 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
   }
 
   .burst i:nth-child(3n) {
-    background: #4ade80;
+    background: var(--phosphore);
   }
 
   .burst i:nth-child(3n + 1) {
-    background: #f87171;
-    border-radius: 2px;
+    background: var(--papier);
   }
 
   @keyframes burst {
