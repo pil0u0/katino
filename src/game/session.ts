@@ -6,6 +6,12 @@ export type GamePhase = 'menu' | 'playing' | 'ended';
 export type MachinePhase = 'ready' | 'spinning';
 export type EndReason = 'time' | 'bankrupt';
 
+/** Un point du graphique : t en ms depuis le début de la partie */
+export interface ChartPoint {
+  t: number;
+  credits: number;
+}
+
 export interface GameStats {
   spins: number;
   totalBet: number;
@@ -24,6 +30,7 @@ export interface GameState {
   lastWin: number;
   endReason: EndReason | null;
   stats: GameStats;
+  points: ChartPoint[];       // uniquement les changements de solde
 }
 
 export function minBet(config: GameConfig): number {
@@ -42,6 +49,7 @@ export function createGame(config: GameConfig): GameState {
     lastWin: 0,
     endReason: null,
     stats: { spins: 0, totalBet: 0, totalWon: 0, biggestWin: 0 },
+    points: [],
   };
 }
 
@@ -50,6 +58,7 @@ export function startGame(state: GameState, now: number): void {
   if (state.phase !== 'menu') return;
   state.phase = 'playing';
   state.startedAt = now;
+  state.points = [{ t: 0, credits: state.credits }];
 }
 
 /** Temps écoulé depuis le début, borné à la durée de la partie. */
@@ -57,6 +66,11 @@ export function elapsed(state: GameState, config: GameConfig, now: number): numb
   if (state.phase === 'menu') return 0;
   const end = state.endedAt ?? now;
   return Math.min(config.durationMs, Math.max(0, end - state.startedAt));
+}
+
+/** Ajoute un point au graphique avec le solde actuel */
+function record(state: GameState, config: GameConfig, now: number): void {
+  state.points.push({ t: elapsed(state, config, now), credits: state.credits });
 }
 
 /** Le temps restant est CALCULÉ, jamais stocké ni décrémenté. */
@@ -103,6 +117,7 @@ export function startSpin(
   state.stats.totalBet += state.bet;
   state.currentSpin = result;
   state.machine = 'spinning';
+  record(state, config, now);
   return result;
 }
 
@@ -116,6 +131,7 @@ export function resolveSpin(state: GameState, config: GameConfig, now: number): 
   state.stats.totalWon += win;
   state.stats.biggestWin = Math.max(state.stats.biggestWin, win);
   state.machine = 'ready';
+  if (win > 0) record(state, config, now); // un lancer perdu ne change pas le solde
 
   if (state.phase !== 'playing') return;
 
@@ -138,4 +154,5 @@ export function endGame(state: GameState, config: GameConfig, reason: EndReason,
   state.endReason = reason;
   state.endedAt = Math.min(now, state.startedAt + config.durationMs);
   if (state.machine === 'spinning') resolveSpin(state, config, now);
+  record(state, config, now);
 }

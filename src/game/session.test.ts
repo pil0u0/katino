@@ -133,3 +133,32 @@ describe('chronomètre', () => {
     expect(game.endReason).toBe('bankrupt');
   });
 });
+
+describe('points du graphique', () => {
+  it('commence par un point à t = 0 avec le solde de départ', () => {
+    const game = startedGame();
+    expect(game.points).toEqual([{ t: 0, credits: 1000 }]);
+  });
+
+  it('ajoute un point à la mise, et un autre seulement si le lancer gagne', () => {
+    const game = startedGame();
+    startSpin(game, CONFIG, 1000, noWin);
+    resolveSpin(game, CONFIG, 2000);
+    startSpin(game, CONFIG, 3000, allCherries);
+    resolveSpin(game, CONFIG, 4000);
+    expect(game.points).toEqual([
+      { t: 0, credits: 1000 },
+      { t: 1000, credits: 990 },
+      { t: 3000, credits: 980 },
+      { t: 4000, credits: 1060 },
+    ]);
+  });
+
+  it('ajoute un point final borné à la durée de la partie', () => {
+    const game = startedGame();
+    startSpin(game, CONFIG, 59_500, allCherries);
+    tick(game, CONFIG, 60_200);
+    expect(game.points.at(-2)).toEqual({ t: 60_000, credits: 1070 }); // gain résolu
+    expect(game.points.at(-1)).toEqual({ t: 60_000, credits: 1070 }); // point final
+  });
+});

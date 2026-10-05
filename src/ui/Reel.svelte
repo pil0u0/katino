@@ -13,8 +13,12 @@
 
   let { symbols, spinId, spinning, durationMs, onstop }: Props = $props();
 
-  const CELL = 104; // hauteur d'une case (96 px) + espace (8 px)
-  const OVERSHOOT = 14; // dépassement en px avant le rebond
+  /** Pas entre deux symboles (case + espace), mesuré dans la page : il varie selon l'écran */
+  function measureStep(): number {
+    const first = stripEl.firstElementChild as HTMLElement;
+    const gap = parseFloat(getComputedStyle(stripEl).rowGap) || 0;
+    return first.getBoundingClientRect().height + gap;
+  }
 
   const icons = Object.fromEntries(
     CONFIG.symbols.map((s) => [s.id, s.icon]),
@@ -67,8 +71,10 @@
     strip = [randomSymbol(), ...finalSymbols, ...filler, ...previous];
     await tick(); // attendre que le DOM contienne la nouvelle bande
 
-    const startY = -(strip.length - 3) * CELL;
-    const endY = -CELL;
+    const step = measureStep();
+    const overshoot = step * 0.135; // dépassement avant le rebond (14 px pour une case de 96 px)
+    const startY = -(strip.length - 3) * step;
+    const endY = -step;
 
     const a = stripEl.animate(
       [
@@ -77,7 +83,7 @@
           easing: "cubic-bezier(.25, .55, .35, 1)",
         },
         {
-          transform: `translateY(${endY + OVERSHOOT}px)`,
+          transform: `translateY(${endY + overshoot}px)`,
           offset: 0.88,
           easing: "ease-out",
         },
@@ -115,8 +121,9 @@
 </div>
 
 <style>
+  /* --cell et --gap viennent de SlotMachine */
   .reel {
-    height: calc(96px * 3 + 8px * 2);
+    height: calc(var(--cell) * 3 + var(--gap) * 2);
     overflow: hidden;
     border-radius: 10px;
   }
@@ -124,16 +131,17 @@
   .strip {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    transform: translateY(-104px); /* position de repos : le tampon est caché */
+    gap: var(--gap);
+    /* position de repos : le tampon est caché, une case plus haut */
+    transform: translateY(calc(-1 * (var(--cell) + var(--gap))));
     will-change: transform;
   }
 
   .symbol {
     display: grid;
     place-items: center;
-    flex: 0 0 96px;
-    font-size: 3rem;
+    flex: 0 0 var(--cell);
+    font-size: calc(var(--cell) / 2);
     background: #2a2a45;
     border-radius: 10px;
   }

@@ -52,4 +52,12 @@
     opacity: 0.35;
     cursor: not-allowed;
   }
+
+  /* Petits écrans : quatre boutons sur une ligne */
+  @media (max-width: 420px) {
+    button {
+      min-width: 3.25rem;
+      padding: 0.5rem;
+    }
+  }
 </style>
