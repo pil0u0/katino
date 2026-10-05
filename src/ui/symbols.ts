@@ -21,12 +21,12 @@ export interface SymbolVisual {
 }
 
 const FALLBACKS: Record<SymbolId, { fallback: string; label: string }> = {
-  cherry:  { fallback: '🍒', label: 'Cerise' },
-  lemon:   { fallback: '🍋', label: 'Citron' },
-  bell:    { fallback: '🔔', label: 'Cloche' },
-  clover:  { fallback: '🍀', label: 'Trèfle' },
-  diamond: { fallback: '💎', label: 'Diamant' },
-  seven:   { fallback: '7️⃣', label: 'Sept' },
+  cherry:  { fallback: '🍒', label: 'Chat endormi' },
+  lemon:   { fallback: '🍋', label: 'Chat content' },
+  bell:    { fallback: '🔔', label: 'Chat surpris' },
+  clover:  { fallback: '🍀', label: 'Chat malicieux' },
+  diamond: { fallback: '💎', label: 'Chat étourdi' },
+  seven:   { fallback: '7️⃣', label: 'Étoile porte-bonheur' },
 };
 
 /** Cherche dans le dossier un fichier dont le nom (sans extension) est l'identifiant */

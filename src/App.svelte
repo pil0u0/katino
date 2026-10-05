@@ -26,6 +26,7 @@
   import EndScreen from "./ui/EndScreen.svelte";
   import CreditsChart, { type ChartSeries } from "./ui/CreditsChart.svelte";
   import { sfx, setMuted } from "./audio/sfx";
+  import RetroWindow from "./ui/RetroWindow.svelte";
 
   let game = $state(createGame(CONFIG));
 
@@ -71,7 +72,7 @@
       }
       series.push({
         label: "Partie actuelle",
-        color: "#38bdf8",
+        color: "var(--phosphore)",
         points,
         width: 3,
       });
@@ -81,7 +82,7 @@
       const isAlsoBest = previous.id === best?.id;
       series.push({
         label: isAlsoBest ? "Partie précédente (record)" : "Partie précédente",
-        color: isAlsoBest ? "#f5c542" : "#9ca3af",
+        color: isAlsoBest ? "var(--moutarde)" : "var(--terne)",
         points: previous.points,
         dashed: true,
       });
@@ -90,7 +91,7 @@
     if (best && best.id !== previous?.id) {
       series.push({
         label: isNewRecord ? "Ancien record" : "Meilleure partie",
-        color: "#f5c542",
+        color: "var(--moutarde)",
         points: best.points,
       });
     }
@@ -289,12 +290,13 @@
   </main>
 
   <aside>
-    <h2>Progression</h2>
-    <CreditsChart
-      series={chartSeries}
-      durationMs={CONFIG.durationMs}
-      baseline={CONFIG.startingCredits}
-    />
+    <RetroWindow title="progression.exe">
+      <CreditsChart
+        series={chartSeries}
+        durationMs={CONFIG.durationMs}
+        baseline={CONFIG.startingCredits}
+      />
+    </RetroWindow>
   </aside>
 </div>
 

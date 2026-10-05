@@ -43,6 +43,18 @@
   let canvas: HTMLCanvasElement;
   let chart: Chart<"line", { x: number; y: number }[]> | null = null;
 
+  /**
+   * Chart.js dessine sur un canvas : il ne comprend pas « var(--moutarde) ».
+   * On lit donc la vraie couleur dans le CSS de la page, pour garder la palette à un seul endroit.
+   */
+  function resolveColor(color: string): string {
+    const match = color.match(/^var\((--[\w-]+)\)$/);
+    if (!match) return color;
+    return getComputedStyle(document.documentElement)
+      .getPropertyValue(match[1])
+      .trim();
+  }
+
   // Conversion vers le format Chart.js. On crée de NOUVEAUX objets :
   // Chart.js modifie les tableaux qu'on lui donne, il ne doit pas toucher à l'état du jeu.
   function toDatasets(list: ChartSeries[]) {
@@ -52,9 +64,9 @@
         { x: 0, y: baseline },
         { x: durationMs / 1000, y: baseline },
       ],
-      borderColor: "rgb(255 255 255 / 0.25)",
+      borderColor: "rgb(232 243 255 / 0.35)",
       borderWidth: 1,
-      borderDash: [4, 4],
+      borderDash: [2, 4],
       pointRadius: 0,
     };
 
@@ -62,13 +74,14 @@
       ...list.map((s) => ({
         label: s.label,
         data: s.points.map((p) => ({ x: p.t / 1000, y: p.credits })),
-        borderColor: s.color,
-        backgroundColor: s.color,
+        borderColor: resolveColor(s.color),
+        backgroundColor: resolveColor(s.color),
         borderWidth: s.width ?? 2,
         borderDash: s.dashed ? [6, 4] : [],
         stepped: "after" as const, // le solde change par paliers
         pointRadius: 0,
-        pointHoverRadius: 4,
+        pointHoverRadius: 5,
+        pointStyle: "rect" as const, // points carrés : rien d'arrondi sur la borne
       })),
       reference,
     ];
@@ -76,6 +89,16 @@
 
   // Création du graphique au montage, destruction au démontage
   $effect(() => {
+    const textColor = resolveColor("var(--papier)");
+    const mutedColor = resolveColor("var(--terne)");
+    const gridColor = "rgb(108 108 240 / 0.18)";
+
+    // Le canvas a besoin de connaître la police : on prend celle de l'interface de la borne
+    Chart.defaults.font.family = getComputedStyle(document.documentElement)
+      .getPropertyValue("--font-ui")
+      .trim();
+    Chart.defaults.font.size = 12;
+
     chart = new Chart(canvas, {
       type: "line",
       data: { datasets: [] },
@@ -92,28 +115,37 @@
             max: durationMs / 1000,
             ticks: {
               stepSize: 10,
-              color: "#9ca3af",
+              color: mutedColor,
               callback: (v) => `${v} s`,
             },
-            grid: { color: "rgb(255 255 255 / 0.06)" },
+            grid: { color: gridColor },
+            border: { color: mutedColor },
           },
           y: {
             suggestedMin: baseline * 0.5,
             suggestedMax: baseline * 1.5,
-            ticks: { color: "#9ca3af" },
-            grid: { color: "rgb(255 255 255 / 0.06)" },
+            ticks: { color: mutedColor },
+            grid: { color: gridColor },
+            border: { color: mutedColor },
           },
         },
         plugins: {
           legend: {
             labels: {
-              color: "#d1d5db",
-              boxWidth: 14,
-              boxHeight: 2,
+              color: textColor,
+              boxWidth: 16,
+              boxHeight: 4,
               filter: (item) => item.text !== "Départ",
             },
           },
           tooltip: {
+            backgroundColor: resolveColor("var(--encre)"),
+            borderColor: resolveColor("var(--phosphore)"),
+            borderWidth: 2,
+            cornerRadius: 0,
+            titleColor: resolveColor("var(--phosphore)"),
+            bodyColor: textColor,
+            displayColors: false,
             callbacks: {
               title: (items) => `${Number(items[0].parsed.x).toFixed(1)} s`,
               label: (item) =>
@@ -123,6 +155,9 @@
         },
       },
     });
+
+    // La police peut finir de charger après la création : on redessine à ce moment-là
+    document.fonts.ready.then(() => chart?.update("none"));
 
     return () => {
       chart?.destroy();
@@ -153,7 +188,5 @@
     height: 280px;
     padding: 12px;
     box-sizing: border-box;
-    background: #1b1b2f;
-    border-radius: 16px;
   }
 </style>

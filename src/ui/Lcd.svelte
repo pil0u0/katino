@@ -4,12 +4,13 @@
     value: string; // ce qui est affiché, en chiffres (et « : » pour le chrono)
     ghost: string; // segments éteints derrière, ex. « 88:88 »
     tone?: "normal" | "gold" | "warning" | "critical";
+    large?: boolean; // grande version, pour le score final
   }
 
-  let { label, value, ghost, tone = "normal" }: Props = $props();
+  let { label, value, ghost, tone = "normal", large = false }: Props = $props();
 </script>
 
-<div class="lcd {tone}">
+<div class="lcd {tone}" class:large>
   <span class="label">{label}</span>
   <div class="screen">
     <!-- Les segments éteints, comme sur un vrai afficheur -->
@@ -41,6 +42,11 @@
     font-family: var(--font-lcd);
     font-size: clamp(1.2rem, 6.5vw, 1.9rem);
     line-height: 1;
+  }
+
+  .large .screen {
+    padding: 12px 14px;
+    font-size: clamp(2rem, 11vw, 3rem);
   }
 
   .ghost,

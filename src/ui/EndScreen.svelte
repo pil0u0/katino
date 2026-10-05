@@ -1,5 +1,7 @@
 <script lang="ts">
   import type { EndReason, GameStats } from "../game/session";
+  import RetroWindow from "./RetroWindow.svelte";
+  import Lcd from "./Lcd.svelte";
 
   interface Props {
     credits: number;
@@ -24,6 +26,9 @@
   }: Props = $props();
 
   const diff = $derived(credits - startingCredits);
+  const title = $derived(
+    isNewRecord ? "nouveau_record.exe" : "partie_terminee.exe",
+  );
 
   /** Formate un écart avec son signe : +120, −45, ±0 */
   function signed(n: number): string {
@@ -35,71 +40,84 @@
 
 <div class="backdrop">
   <div
-    class="panel"
+    class="dialog"
     class:record={isNewRecord}
     role="dialog"
     aria-modal="true"
-    aria-labelledby="end-title"
+    aria-labelledby="end-reason"
   >
     {#if isNewRecord}
-      <p class="badge">🏆 Nouveau record !</p>
-    {:else}
-      <p class="reason">
-        {reason === "time" ? "Temps écoulé !" : "Faillite !"}
-      </p>
+      <span class="sticker" aria-hidden="true">Nouveau record !</span>
     {/if}
 
-    <h2 id="end-title">{credits}</h2>
-    <p class="diff" class:up={diff > 0} class:down={diff < 0}>
-      {signed(diff)} par rapport au départ
-    </p>
+    <RetroWindow {title}>
+      <div class="content">
+        <p class="reason" id="end-reason">
+          {reason === "time" ? "Temps écoulé" : "Faillite"}
+        </p>
 
-    {#if previousCredits !== null || recordToBeat !== null}
-      <ul class="compare">
-        {#if previousCredits !== null}
-          <li>
-            <span>Partie précédente</span>
-            <strong>{previousCredits}</strong>
-            <em
-              class:up={credits > previousCredits}
-              class:down={credits < previousCredits}
-            >
-              {signed(credits - previousCredits)}
-            </em>
-          </li>
+        <Lcd
+          label="Score final"
+          value={String(credits)}
+          ghost="888888"
+          tone={isNewRecord ? "gold" : "normal"}
+          large
+        />
+
+        <p class="diff" class:up={diff > 0} class:down={diff < 0}>
+          {signed(diff)} par rapport au départ
+        </p>
+
+        {#if previousCredits !== null || recordToBeat !== null}
+          <dl class="compare">
+            {#if previousCredits !== null}
+              <div>
+                <dt>Partie précédente</dt>
+                <dd>{previousCredits}</dd>
+                <dd
+                  class="delta"
+                  class:up={credits > previousCredits}
+                  class:down={credits < previousCredits}
+                >
+                  {signed(credits - previousCredits)}
+                </dd>
+              </div>
+            {/if}
+            {#if recordToBeat !== null}
+              <div>
+                <dt>{isNewRecord ? "Ancien record" : "Record"}</dt>
+                <dd>{recordToBeat}</dd>
+                <dd
+                  class="delta"
+                  class:up={credits > recordToBeat}
+                  class:down={credits < recordToBeat}
+                >
+                  {signed(credits - recordToBeat)}
+                </dd>
+              </div>
+            {/if}
+          </dl>
         {/if}
-        {#if recordToBeat !== null}
-          <li>
-            <span>{isNewRecord ? "Ancien record" : "Record"}</span>
-            <strong>{recordToBeat}</strong>
-            <em
-              class:up={credits > recordToBeat}
-              class:down={credits < recordToBeat}
-            >
-              {signed(credits - recordToBeat)}
-            </em>
-          </li>
-        {/if}
-      </ul>
-    {/if}
 
-    <dl>
-      <div>
-        <dt>Lancers</dt>
-        <dd>{stats.spins}</dd>
-      </div>
-      <div>
-        <dt>Plus gros gain</dt>
-        <dd>{stats.biggestWin}</dd>
-      </div>
-      <div>
-        <dt>Total misé</dt>
-        <dd>{stats.totalBet}</dd>
-      </div>
-    </dl>
+        <dl class="stats">
+          <div>
+            <dt>Lancers</dt>
+            <dd>{stats.spins}</dd>
+          </div>
+          <div>
+            <dt>Plus gros gain</dt>
+            <dd>{stats.biggestWin}</dd>
+          </div>
+          <div>
+            <dt>Total misé</dt>
+            <dd>{stats.totalBet}</dd>
+          </div>
+        </dl>
 
-    <!-- svelte-ignore a11y_autofocus -->
-    <button onclick={onrestart} autofocus>Rejouer</button>
+        <!-- svelte-ignore a11y_autofocus -->
+        <button onclick={onrestart} autofocus>Rejouer</button>
+      </div>
+    </RetroWindow>
   </div>
 </div>
 
@@ -107,32 +125,26 @@
   .backdrop {
     position: fixed;
     inset: 0;
+    z-index: 10;
     display: grid;
     place-items: center;
     padding: 1rem;
-    background: rgb(10 10 20 / 0.75);
-    backdrop-filter: blur(4px);
+    /* La salle s'assombrit, avec la même trame que le fond */
+    background-color: rgb(7 8 42 / 0.8);
+    background-image: radial-gradient(
+      rgb(108 108 240 / 0.25) 1px,
+      transparent 1.4px
+    );
+    background-size: 6px 6px;
   }
 
-  .panel {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
+  .dialog {
+    position: relative;
     width: min(100%, 24rem);
-    padding: 2rem;
-    background: #1b1b2f;
-    border-radius: 20px;
-    text-align: center;
+    animation: arrive 0.3s steps(4, jump-none);
   }
 
-  .panel.record {
-    box-shadow:
-      0 0 0 3px #f5c542,
-      0 0 50px rgb(245 197 66 / 0.35);
-    animation: arrive 0.5s cubic-bezier(0.2, 1.3, 0.4, 1);
-  }
-
+  /* La fenêtre « s'ouvre » par à-coups, comme sur un vieux PC */
   @keyframes arrive {
     from {
       transform: scale(0.85);
@@ -140,105 +152,130 @@
     }
   }
 
+  .sticker {
+    position: absolute;
+    right: -8px;
+    bottom: -14px;
+    z-index: 2;
+    padding: 4px 10px;
+    font-size: 0.9rem;
+    color: var(--encre);
+    background: var(--moutarde);
+    border: 2px solid var(--encre);
+    box-shadow: 3px 3px 0 var(--encre);
+    transform: rotate(-5deg);
+  }
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 16px;
+    color: var(--papier);
+  }
+
   .reason {
     margin: 0;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    opacity: 0.7;
-  }
-
-  .badge {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #f5c542;
-  }
-
-  h2 {
-    margin: 0;
-    font-size: 3.5rem;
-    font-variant-numeric: tabular-nums;
-    color: #f5c542;
+    text-align: center;
+    font-size: 1rem;
+    color: var(--phosphore);
   }
 
   .diff {
     margin: 0;
-    font-weight: 600;
+    text-align: center;
   }
 
   .up {
-    color: #4ade80;
+    color: var(--moutarde);
   }
 
   .down {
-    color: #f87171;
+    color: var(--alarme);
   }
 
+  /* Tableau de comparaison : une ligne par partie de référence */
   .compare {
-    width: 100%;
-    margin: 0.75rem 0 0;
-    padding: 0;
-    list-style: none;
+    margin: 0;
+    border: 2px solid var(--riso);
   }
 
-  .compare li {
+  .compare div {
     display: grid;
     grid-template-columns: 1fr auto 4.5rem;
-    gap: 0.75rem;
-    padding: 0.4rem 0;
-    border-top: 1px solid rgb(255 255 255 / 0.08);
+    gap: 10px;
+    padding: 6px 10px;
+  }
+
+  .compare div + div {
+    border-top: 2px solid var(--riso);
+  }
+
+  .compare dt {
+    color: var(--terne);
+  }
+
+  .compare dd {
+    margin: 0;
     font-variant-numeric: tabular-nums;
-    text-align: left;
   }
 
-  .compare span {
-    opacity: 0.7;
-  }
-
-  .compare em {
-    font-style: normal;
-    font-weight: 700;
+  .compare .delta {
     text-align: right;
   }
 
-  dl {
+  .stats {
     display: flex;
-    gap: 1.5rem;
-    margin: 1rem 0;
+    justify-content: space-between;
+    margin: 0;
   }
 
-  dl div {
+  .stats div {
     display: flex;
     flex-direction: column;
+    align-items: center;
   }
 
-  dt {
+  .stats dt {
     font-size: 0.75rem;
-    opacity: 0.6;
+    color: var(--terne);
   }
 
-  dd {
+  .stats dd {
     margin: 0;
-    font-weight: 700;
+    font-size: 1.05rem;
     font-variant-numeric: tabular-nums;
   }
 
+  /* Même bouton d'arcade que sur la borne */
   button {
-    font-size: 1.25rem;
-    font-weight: 700;
-    padding: 0.75rem 3rem;
-    border: none;
+    align-self: center;
+    min-width: 12rem;
+    margin-top: 4px;
+    padding: 0.7rem 2rem;
+    font-family: var(--font-titre);
+    font-size: 1.3rem;
+    color: var(--encre);
+    background: var(--moutarde);
+    border: var(--contour);
     border-radius: 999px;
-    background: #f5c542;
-    color: #1b1b2f;
+    box-shadow:
+      inset 0 -5px 0 rgb(7 8 42 / 0.25),
+      0 6px 0 #000;
     cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  button:active {
+    transform: translateY(4px);
+    box-shadow:
+      inset 0 -2px 0 rgb(7 8 42 / 0.25),
+      0 2px 0 #000;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .panel.record {
+    .dialog {
       animation: none;
     }
   }
